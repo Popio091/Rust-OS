@@ -1,8 +1,7 @@
 Goku - the most powerful Sayian known in the Dragon Ball verse able to withstand all that is possible.
 
 His possible forms include:
-
--  **SSJ:**
+-  SSJ:
   (Suser Sayian) - A transformation known by many for its legendary golden glow and its simmilarity to Sonic's Super Form, recognisable as THE sayian form
 -  SSJ 2:
   The upgrade to the 1st sayian transformation, known to increse the 50 times increse in strength by another 2 times while also making the already standing up yellow hair sharper and adds electricity on top of it
