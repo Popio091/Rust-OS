@@ -1,7 +1,0 @@
-node_modules/
-.env
-.DS_Store
-# Keep the data folders but ignore their contents when using GitHub.
-data/files/*
-!data/files/goku/
-!data/files/sonic/
