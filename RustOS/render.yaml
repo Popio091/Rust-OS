@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: rustos-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: RUST_PASSWORD
+        sync: false
+      - key: FG_PASSWORD
+        sync: false
