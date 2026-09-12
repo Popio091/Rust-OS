@@ -13,6 +13,17 @@ const DATA = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.jo
 const FILES = path.join(DATA, 'files');
 const MAX_UPLOAD = 10 * 1024 * 1024;
 
+// Character folders. Must match the CHARACTERS array in RustOS.html / index.html.
+// To add a character: add its key here AND to that array, then redeploy.
+const CHARACTERS = [
+  'goku', 'sonic', 'goodwire', 'fg', 'rustthedgehog', 'bryce', 'milessa', 'flow',
+  'tempest', 'tempestpendragon', 'artorius', 'comet', 'fluxen', 'takuya', 'takeru',
+  'dawn', 'dusk', 'sorin', 'thedoctor', 'tinitus', 'lindoz', 'smudger', 'db',
+  'crimson', 'mitis', 'gareth', 'gawain', 'agravain', 'apricity', 'kurotsuki',
+  'sable', 'kirby', 'shadow', 'knuckles', 'tails', 'cream', 'sally', 'vanilla',
+  'amy', 'big', 'silver', 'blaze'
+];
+
 // GitHub-backed persistent storage (used in production instead of a Render disk).
 const GITHUB_API = 'https://api.github.com';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
@@ -29,14 +40,16 @@ if (isProduction && !USE_GITHUB_STORAGE) {
   process.exit(1);
 }
 const rustPassword = process.env.RUST_PASSWORD || (isProduction ? null : 'God');
-const fgPassword = process.env.FG_PASSWORD || (isProduction ? null : 'FG');
-if (isProduction && (!rustPassword || !fgPassword)) {
+// The read-only account is labeled "User" in the UI. It still reads its password from
+// FG_PASSWORD so existing Render environment variables don't need to be renamed.
+const userPassword = process.env.FG_PASSWORD || (isProduction ? null : 'User');
+if (isProduction && (!rustPassword || !userPassword)) {
   console.error('RUST_PASSWORD and FG_PASSWORD must be set in production.');
   process.exit(1);
 }
 const USERS = {
   Rust: { password: rustPassword, role: 'editor' },
-  FG: { password: fgPassword, role: 'viewer' }
+  User: { password: userPassword, role: 'viewer' }
 };
 
 // GitHub Pages -> backend is cross-origin, so CORS must allow the exact site origin.
@@ -45,7 +58,7 @@ const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '';
 const SESSIONS = new Map();
 
 if (!USE_GITHUB_STORAGE) {
-  for (const dir of [DATA, FILES, path.join(FILES, 'goku'), path.join(FILES, 'sonic')]) {
+  for (const dir of [DATA, FILES, ...CHARACTERS.map(c => path.join(FILES, c))]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
@@ -59,7 +72,7 @@ function githubHeaders() {
   };
 }
 function githubPath(character, name = '') {
-  if (!['goku', 'sonic'].includes(character)) throw new Error('Invalid character');
+  if (!CHARACTERS.includes(character)) throw new Error('Invalid character');
   return [GITHUB_PATH_PREFIX, character, name && safePart(name)].filter(Boolean).join('/');
 }
 async function githubRequest(method, apiPath, bodyJson) {
@@ -149,7 +162,7 @@ function session(req) {
 }
 function safePart(s) { return path.basename(String(s)); }
 function filePath(character, name) {
-  if (!['goku', 'sonic'].includes(character)) throw new Error('Invalid character');
+  if (!CHARACTERS.includes(character)) throw new Error('Invalid character');
   return path.join(FILES, character, safePart(name));
 }
 function mime(name) {
@@ -248,7 +261,7 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/files' && req.method === 'GET') {
       const s = requireAuth(req, res); if (!s) return;
       const c = u.searchParams.get('character');
-      if (!['goku', 'sonic'].includes(c)) return json(res, 400, { error: 'Invalid character' }, headers);
+      if (!CHARACTERS.includes(c)) return json(res, 400, { error: 'Invalid character' }, headers);
       let files;
       if (USE_GITHUB_STORAGE) {
         const items = await githubList(c);
