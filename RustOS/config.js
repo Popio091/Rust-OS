@@ -7,4 +7,4 @@
 // After deploying server.js to Render, replace the empty string with the
 // exact HTTPS URL Render gives your backend, for example:
 // window.RUSTOS_API_BASE = 'https://rustos-backend.onrender.com';
-window.RUSTOS_API_BASE = '';
+window.RUSTOS_API_BASE = 'https://rust-os.onrender.com';
