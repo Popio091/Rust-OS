@@ -332,6 +332,9 @@
 
   .text-toolbar button:hover:not(:disabled) { background: #464648; }
   .text-toolbar button:disabled { cursor: not-allowed; opacity: 0.45; }
+  .text-toolbar button.fmt-bold { font-weight: 700; }
+  .text-toolbar button.fmt-italic { font-style: italic; }
+  .toolbar-divider-v { width: 1px; align-self: stretch; background: var(--dark-border); margin: 0 2px; }
 
   .text-filename {
     font-size: 12.5px;
@@ -673,6 +676,10 @@ function renderCharacters() {
             <button id="open-text-${key}">Refresh</button>
             <button id="save-text-${key}" disabled>Save</button>
             <button id="saveas-text-${key}" disabled>Save As&hellip;</button>
+            <span class="toolbar-divider-v"></span>
+            <button id="bold-${key}" class="fmt-bold" title="Bold" disabled>B</button>
+            <button id="italic-${key}" class="fmt-italic" title="Italic" disabled>I</button>
+            <button id="list-${key}" title="Bulleted list" disabled>&bull; List</button>
             <span class="text-filename" id="filename-${key}">No file open</span>
           </div>
           <textarea class="char-textarea" id="textarea-${key}" placeholder="No text file yet for ${esc(label)}."></textarea>
@@ -867,6 +874,41 @@ folderItems.forEach(item => item.onclick = async () => {
   try { await loadCharacter(key); } catch (e) { dbStatusbar.textContent = e.message; }
 });
 
+// ---- Basic text formatting (inserts Markdown syntax into the plain-text file) ----
+function applyWrap(textarea, before, after) {
+  if (textarea.readOnly) return;
+  const start = textarea.selectionStart, end = textarea.selectionEnd;
+  const value = textarea.value;
+  const selected = value.slice(start, end);
+  const placeholder = selected || 'text';
+  textarea.value = value.slice(0, start) + before + placeholder + after + value.slice(end);
+  const newStart = start + before.length;
+  textarea.focus();
+  textarea.setSelectionRange(newStart, newStart + placeholder.length);
+  textarea.dispatchEvent(new Event('input'));
+}
+
+function applyListPrefix(textarea) {
+  if (textarea.readOnly) return;
+  const start = textarea.selectionStart, end = textarea.selectionEnd;
+  const value = textarea.value;
+  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+  let lineEnd = value.indexOf('\n', end);
+  if (lineEnd === -1) lineEnd = value.length;
+  const lines = value.slice(lineStart, lineEnd).split('\n');
+  const nonEmpty = lines.filter(l => l.trim() !== '');
+  const allPrefixed = nonEmpty.length > 0 && nonEmpty.every(l => l.startsWith('- '));
+  const newLines = lines.map(l => {
+    if (l.trim() === '') return l;
+    return allPrefixed ? l.replace(/^- /, '') : (l.startsWith('- ') ? l : '- ' + l);
+  });
+  const newBlock = newLines.join('\n');
+  textarea.value = value.slice(0, lineStart) + newBlock + value.slice(lineEnd);
+  textarea.focus();
+  textarea.setSelectionRange(lineStart, lineStart + newBlock.length);
+  textarea.dispatchEvent(new Event('input'));
+}
+
 CHARACTERS.map(c => c.key).forEach(key => {
   const ta = document.getElementById('textarea-' + key);
   ta.oninput = () => { document.getElementById('save-text-' + key).disabled = !canEdit; };
@@ -881,6 +923,9 @@ CHARACTERS.map(c => c.key).forEach(key => {
   };
   document.getElementById('saveas-text-' + key).onclick = () => { if (!canEdit) return; document.getElementById('upload-text-btn').click(); };
   document.getElementById('open-text-' + key).onclick = () => loadCharacter(key);
+  document.getElementById('bold-' + key).onclick = () => applyWrap(ta, '**', '**');
+  document.getElementById('italic-' + key).onclick = () => applyWrap(ta, '*', '*');
+  document.getElementById('list-' + key).onclick = () => applyListPrefix(ta);
 });
 
 let uploadMode = 'text', uploadKey = null;
@@ -910,6 +955,9 @@ async function setUser() {
       document.getElementById('textarea-' + k).readOnly = !canEdit;
       document.getElementById('save-text-' + k).disabled = !canEdit;
       document.getElementById('saveas-text-' + k).disabled = !canEdit;
+      document.getElementById('bold-' + k).disabled = !canEdit;
+      document.getElementById('italic-' + k).disabled = !canEdit;
+      document.getElementById('list-' + k).disabled = !canEdit;
     });
   } catch { document.getElementById('login-screen').style.display = 'flex'; }
 }
