@@ -39,16 +39,18 @@ if (isProduction && !USE_GITHUB_STORAGE) {
   console.error('GITHUB_TOKEN, GITHUB_OWNER, and GITHUB_REPO must be set in production.');
   process.exit(1);
 }
-const rustPassword = process.env.RUST_PASSWORD || (isProduction ? null : 'God');
+// The editor account is labeled "Host" in the UI. It still reads its password from
+// RUST_PASSWORD so existing Render environment variables don't need to be renamed.
+const hostPassword = process.env.RUST_PASSWORD || (isProduction ? null : 'God');
 // The read-only account is labeled "User" in the UI. It still reads its password from
 // FG_PASSWORD so existing Render environment variables don't need to be renamed.
 const userPassword = process.env.FG_PASSWORD || (isProduction ? null : 'User');
-if (isProduction && (!rustPassword || !userPassword)) {
+if (isProduction && (!hostPassword || !userPassword)) {
   console.error('RUST_PASSWORD and FG_PASSWORD must be set in production.');
   process.exit(1);
 }
 const USERS = {
-  Rust: { password: rustPassword, role: 'editor' },
+  Host: { password: hostPassword, role: 'editor' },
   User: { password: userPassword, role: 'viewer' }
 };
 
