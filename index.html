@@ -803,6 +803,20 @@ async function api(url, opt = {}) {
 }
 function fileUrl(key, name) { return API_BASE + '/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(name); }
 
+// <img src="..."> can't send the Authorization header the API needs (the frontend and
+// backend live on different domains), so images are fetched the same authenticated way
+// as everything else and shown via a blob URL instead of pointing <img> at the API directly.
+const imageObjectUrls = {};
+async function fetchImageObjectUrl(key, name) {
+  const headers = new Headers();
+  const token = localStorage.getItem('rustos_token');
+  if (token) headers.set('Authorization', 'Bearer ' + token);
+  const r = await fetch(fileUrl(key, name), { headers });
+  if (!r.ok) throw new Error('Failed to load image (' + r.status + ')');
+  const blob = await r.blob();
+  return URL.createObjectURL(blob);
+}
+
 async function loadCharacter(key) {
   const d = await api('/api/files?character=' + encodeURIComponent(key));
   const ta = document.getElementById('textarea-' + key), fn = document.getElementById('filename-' + key),
@@ -817,7 +831,14 @@ async function loadCharacter(key) {
     ta.value = ''; fn.textContent = 'No text file uploaded';
   }
   if (image) {
-    img.src = fileUrl(key, image.name); img.style.display = 'block'; ph.style.display = 'none'; il.textContent = image.name;
+    try {
+      const url = await fetchImageObjectUrl(key, image.name);
+      if (imageObjectUrls[key]) URL.revokeObjectURL(imageObjectUrls[key]);
+      imageObjectUrls[key] = url;
+      img.src = url; img.style.display = 'block'; ph.style.display = 'none'; il.textContent = image.name;
+    } catch (e) {
+      img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = 'block'; il.textContent = 'Could not load image';
+    }
   } else {
     img.removeAttribute('src'); img.style.display = 'none'; ph.style.display = 'block'; il.textContent = 'No image selected';
   }
