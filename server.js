@@ -21,7 +21,7 @@ const CHARACTERS = [
   'dawn', 'dusk', 'sorin', 'thedoctor', 'tinitus', 'lindoz', 'smudger', 'db',
   'crimson', 'mitis', 'gareth', 'gawain', 'agravain', 'apricity', 'kurotsuki',
   'sable', 'kirby', 'shadow', 'knuckles', 'tails', 'cream', 'sally', 'vanilla',
-  'amy', 'big', 'silver', 'blaze'
+  'amy', 'big', 'silver', 'blaze', 'pokedex'
 ];
 
 // GitHub-backed persistent storage (used in production instead of a Render disk).

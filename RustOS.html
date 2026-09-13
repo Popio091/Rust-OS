@@ -479,7 +479,16 @@
   #login-error { min-height:16px; margin-top:10px; color:#ff7b7b; font-size:12px; }
   #account-area { margin-left:auto; display:flex; align-items:center; gap:8px; padding:0 12px; font-size:12px; }
   #logout-btn { padding:4px 8px; background:#3a3a3c; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; }
-  .upload-row { display:none; gap:6px; padding:8px 12px; background:var(--dark-panel); border-bottom:1px solid var(--dark-border); }
+  .upload-row { display:none; gap:6px; padding:8px 12px; background:var(--dark-panel); border-bottom:1px solid var(--dark-border); align-items:center; }
+  .autosave-toggle { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:12px; color:var(--dark-text); cursor:pointer; }
+  .autosave-toggle input { cursor:pointer; }
+  .text-toolbar button.unsaved {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .text-toolbar button.unsaved:hover:not(:disabled) { background: #3a7fd9; }
   .upload-row.visible { display:flex; }
   .upload-row button { font-size:12px; padding:5px 10px; background:#3a3a3c; border:1px solid #4a4a4d; color:var(--dark-text); cursor:pointer; }
   .upload-row input { font-size:12px; color:var(--dark-text); max-width:230px; }
@@ -554,7 +563,7 @@
       </div>
 
       <div class="char-area" id="char-area">
-        <div class="upload-row" id="upload-row"><button id="upload-text-btn">Upload Text</button><button id="upload-image-btn">Upload Image</button><input id="upload-file" type="file" hidden></div>
+        <div class="upload-row" id="upload-row"><button id="upload-text-btn">Upload Text</button><button id="upload-image-btn">Upload Image</button><input id="upload-file" type="file" hidden><label class="autosave-toggle"><input type="checkbox" id="autosave-toggle"> Autosave</label></div>
         <div class="char-empty" id="char-empty">Select a character folder on the left.</div>
         <!-- Character panels are appended here by renderCharacters() -->
       </div>
@@ -639,7 +648,8 @@ const CHARACTERS = [
   { key: 'amy', label: 'Amy' },
   { key: 'big', label: 'Big' },
   { key: 'silver', label: 'Silver' },
-  { key: 'blaze', label: 'Blaze' }
+  { key: 'blaze', label: 'Blaze' },
+  { key: 'pokedex', label: 'Pokédex' }
 ];
 
 function esc(s) {
@@ -649,7 +659,10 @@ function esc(s) {
 function renderCharacters() {
   const sidebar = document.getElementById('folder-sidebar-items');
   const area = document.getElementById('char-area');
-  CHARACTERS.forEach(({ key, label }) => {
+  // Sorted alphabetically by display label, so new characters just need to be added to
+  // the CHARACTERS array below (in any order) — the sidebar list order is automatic.
+  const sorted = [...CHARACTERS].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+  sorted.forEach(({ key, label }) => {
     const folderBtn = document.createElement('div');
     folderBtn.className = 'folder-item';
     folderBtn.dataset.char = key;
@@ -825,6 +838,7 @@ async function fetchImageObjectUrl(key, name) {
 }
 
 async function loadCharacter(key) {
+  clearTimeout(autosaveTimers[key]);
   const d = await api('/api/files?character=' + encodeURIComponent(key));
   const ta = document.getElementById('textarea-' + key), fn = document.getElementById('filename-' + key),
         img = document.getElementById('img-' + key), ph = document.getElementById('placeholder-' + key),
@@ -837,6 +851,7 @@ async function loadCharacter(key) {
   } else {
     ta.value = ''; fn.textContent = 'No text file uploaded';
   }
+  document.getElementById('save-text-' + key).classList.remove('unsaved');
   if (image) {
     try {
       const url = await fetchImageObjectUrl(key, image.name);
@@ -909,24 +924,55 @@ function applyListPrefix(textarea) {
   textarea.dispatchEvent(new Event('input'));
 }
 
+// ---- Autosave (Host only) ----
+let autosaveEnabled = localStorage.getItem('rustos_autosave') !== 'false'; // defaults on
+const autosaveTimers = {};
+const AUTOSAVE_DELAY_MS = 1500;
+
+async function saveCharacterText(key, { silent } = {}) {
+  clearTimeout(autosaveTimers[key]);
+  const ta = document.getElementById('textarea-' + key);
+  const saveBtn = document.getElementById('save-text-' + key);
+  const name = document.getElementById('filename-' + key).textContent;
+  if (!canEdit || !name || name === 'No text file uploaded') return false;
+  try {
+    await api('/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(name), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: ta.value }) });
+    saveBtn.classList.remove('unsaved');
+    dbStatusbar.textContent = (silent ? 'Autosaved ' : 'Saved ') + name;
+    return true;
+  } catch (e) {
+    dbStatusbar.textContent = 'Save failed: ' + e.message;
+    return false;
+  }
+}
+
 CHARACTERS.map(c => c.key).forEach(key => {
   const ta = document.getElementById('textarea-' + key);
-  ta.oninput = () => { document.getElementById('save-text-' + key).disabled = !canEdit; };
-  document.getElementById('save-text-' + key).onclick = async () => {
+  const saveBtn = document.getElementById('save-text-' + key);
+  ta.oninput = () => {
+    saveBtn.disabled = !canEdit;
     if (!canEdit) return;
-    const name = document.getElementById('filename-' + key).textContent;
-    if (!name || name === 'No text file uploaded') return;
-    try {
-      await api('/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(name), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: ta.value }) });
-      dbStatusbar.textContent = 'Saved ' + name;
-    } catch (e) { dbStatusbar.textContent = 'Save failed: ' + e.message; }
+    saveBtn.classList.add('unsaved');
+    if (autosaveEnabled) {
+      clearTimeout(autosaveTimers[key]);
+      autosaveTimers[key] = setTimeout(() => saveCharacterText(key, { silent: true }), AUTOSAVE_DELAY_MS);
+    }
   };
+  saveBtn.onclick = () => saveCharacterText(key);
   document.getElementById('saveas-text-' + key).onclick = () => { if (!canEdit) return; document.getElementById('upload-text-btn').click(); };
   document.getElementById('open-text-' + key).onclick = () => loadCharacter(key);
   document.getElementById('bold-' + key).onclick = () => applyWrap(ta, '**', '**');
   document.getElementById('italic-' + key).onclick = () => applyWrap(ta, '*', '*');
   document.getElementById('list-' + key).onclick = () => applyListPrefix(ta);
 });
+
+const autosaveToggle = document.getElementById('autosave-toggle');
+autosaveToggle.checked = autosaveEnabled;
+autosaveToggle.onchange = () => {
+  autosaveEnabled = autosaveToggle.checked;
+  localStorage.setItem('rustos_autosave', String(autosaveEnabled));
+  dbStatusbar.textContent = autosaveEnabled ? 'Autosave on' : 'Autosave off — use Save';
+};
 
 let uploadMode = 'text', uploadKey = null;
 document.getElementById('upload-text-btn').onclick = () => { if (!canEdit) return; uploadMode = 'text'; document.getElementById('upload-file').accept = '.txt,.md,.log,.csv'; document.getElementById('upload-file').click(); };
