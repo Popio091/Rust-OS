@@ -107,7 +107,7 @@ async function githubGet(character, name) {
   const data = await githubRequest('GET', `/repos/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(GITHUB_REPO)}/contents/${p}?ref=${encodeURIComponent(GITHUB_BRANCH)}`);
   if (data.type !== 'file' || !data.sha) throw new Error('File not found');
   const blob = await githubRequest('GET', `/repos/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(GITHUB_REPO)}/git/blobs/${encodeURIComponent(data.sha)}`);
-  if (!blob.content) throw new Error('File content unavailable');
+  if (typeof blob.content !== 'string') throw new Error('File content unavailable');
   return { data: Buffer.from(blob.content.replace(/\n/g, ''), 'base64'), sha: data.sha, name: data.name, download_url: data.download_url };
 }
 async function githubEnsureBranch() {
