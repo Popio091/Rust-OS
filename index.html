@@ -928,22 +928,31 @@ function applyListPrefix(textarea) {
 let autosaveEnabled = localStorage.getItem('rustos_autosave') !== 'false'; // defaults on
 const autosaveTimers = {};
 const AUTOSAVE_DELAY_MS = 1500;
+const saveChains = {}; // per-character promise chain so saves never overlap/race on GitHub's sha check
 
-async function saveCharacterText(key, { silent } = {}) {
-  clearTimeout(autosaveTimers[key]);
+async function doSaveCharacterText(key, { silent } = {}) {
   const ta = document.getElementById('textarea-' + key);
   const saveBtn = document.getElementById('save-text-' + key);
   const name = document.getElementById('filename-' + key).textContent;
   if (!canEdit || !name || name === 'No text file uploaded') return false;
+  const content = ta.value; // read at execution time, not queue time, so we always send the latest text
   try {
-    await api('/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(name), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: ta.value }) });
-    saveBtn.classList.remove('unsaved');
+    await api('/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(name), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content }) });
+    if (ta.value === content) saveBtn.classList.remove('unsaved'); // only clear if nothing changed while this save was in flight
     dbStatusbar.textContent = (silent ? 'Autosaved ' : 'Saved ') + name;
     return true;
   } catch (e) {
     dbStatusbar.textContent = 'Save failed: ' + e.message;
     return false;
   }
+}
+
+function saveCharacterText(key, opts = {}) {
+  clearTimeout(autosaveTimers[key]);
+  const prior = saveChains[key] || Promise.resolve();
+  const next = prior.catch(() => {}).then(() => doSaveCharacterText(key, opts));
+  saveChains[key] = next;
+  return next;
 }
 
 CHARACTERS.map(c => c.key).forEach(key => {
