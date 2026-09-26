@@ -210,9 +210,30 @@
   }
   #folder-search:focus { border-color: var(--accent); }
 
-  .folder-group { margin-top: 4px; }
-  .folder-group.search-empty .group-label,
-  .folder-group.search-empty .folder-group-empty { display: none; }
+  .category-folder-item {
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 11px 14px;
+    color: var(--dark-text);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+  }
+  .category-folder-item:hover { background: var(--dark-hover); }
+  .category-folder-item svg { width: 20px; height: 16px; flex-shrink: 0; }
+
+  .folder-back-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    color: var(--dark-text-dim);
+    cursor: pointer;
+  }
+  .folder-back-row:hover { color: #fff; background: var(--dark-hover); }
+
   .folder-group-empty {
     padding: 4px 14px 12px;
     font-size: 11.5px;
@@ -567,21 +588,32 @@
            arrays in the script below. To add an entry: add it to the matching array here
            AND to the flat ITEM_KEYS array near the top of server.js, then redeploy. -->
       <div class="folder-sidebar">
-        <input type="text" id="folder-search" placeholder="Search&hellip;" autocomplete="off">
-        <div class="folder-group" data-group="characters">
-          <div class="group-label">Characters</div>
-          <div class="folder-group-items" id="folder-sidebar-characters"></div>
+        <div id="folder-root">
+          <div class="group-label">Database</div>
+          <div class="category-folder-item" data-category="characters">
+            <svg viewBox="0 0 40 32"><path fill="#5aa6e8" d="M2 6c0-1.1.9-2 2-2h11l3 4h18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2z"/></svg>
+            Characters
+          </div>
+          <div class="category-folder-item" data-category="artifacts">
+            <svg viewBox="0 0 40 32"><path fill="#5aa6e8" d="M2 6c0-1.1.9-2 2-2h11l3 4h18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2z"/></svg>
+            Artifacts
+          </div>
         </div>
-        <div class="folder-group" data-group="artifacts">
-          <div class="group-label">Artifacts</div>
+
+        <div id="folder-category-view" style="display:none;">
+          <div class="folder-back-row" id="folder-back-btn">&larr; Back</div>
+          <input type="text" id="folder-search" placeholder="Search&hellip;" autocomplete="off">
+          <div class="group-label" id="category-view-label">Characters</div>
+          <div class="folder-group-items" id="folder-sidebar-characters"></div>
           <div class="folder-group-items" id="folder-sidebar-artifacts"></div>
           <div class="folder-group-empty" id="folder-empty-artifacts">No artifacts yet.</div>
+          <div class="folder-group-empty" id="folder-no-results" style="display:none;">No matches.</div>
         </div>
       </div>
 
       <div class="char-area" id="char-area">
         <div class="upload-row" id="upload-row"><button id="upload-text-btn">Upload Text</button><button id="upload-image-btn">Upload Image</button><input id="upload-file" type="file" hidden><label class="autosave-toggle"><input type="checkbox" id="autosave-toggle"> Autosave</label></div>
-        <div class="char-empty" id="char-empty">Select a character folder on the left.</div>
+        <div class="char-empty" id="char-empty">Choose Characters or Artifacts, then a folder.</div>
         <!-- Character and artifact panels are appended here by renderDatabaseItems() -->
       </div>
     </div>
@@ -921,18 +953,56 @@ async function loadCharacter(key) {
 }
 
 const folderItems = document.querySelectorAll('.folder-item');
-const folderGroups = document.querySelectorAll('.folder-group');
 const charEmpty = document.getElementById('char-empty');
+const folderRoot = document.getElementById('folder-root');
+const folderCategoryView = document.getElementById('folder-category-view');
+const categoryViewLabel = document.getElementById('category-view-label');
+const charSidebarEl = document.getElementById('folder-sidebar-characters');
+const artifactSidebarEl = document.getElementById('folder-sidebar-artifacts');
+const emptyArtifactsEl = document.getElementById('folder-empty-artifacts');
+const noResultsEl = document.getElementById('folder-no-results');
+let currentCategory = null;
+
+function updateFolderEmptyStates() {
+  const q = document.getElementById('folder-search').value.trim().toLowerCase();
+  const activeContainer = currentCategory === 'artifacts' ? artifactSidebarEl : charSidebarEl;
+  const items = [...activeContainer.querySelectorAll('.folder-item')];
+  const visibleCount = items.filter(i => !i.classList.contains('filtered-out')).length;
+  emptyArtifactsEl.style.display = (currentCategory === 'artifacts' && items.length === 0) ? 'block' : 'none';
+  noResultsEl.style.display = (items.length > 0 && q && visibleCount === 0) ? 'block' : 'none';
+}
+
+function openCategory(category) {
+  currentCategory = category;
+  folderRoot.style.display = 'none';
+  folderCategoryView.style.display = 'block';
+  categoryViewLabel.textContent = category === 'artifacts' ? 'Artifacts' : 'Characters';
+  charSidebarEl.style.display = category === 'artifacts' ? 'none' : 'block';
+  artifactSidebarEl.style.display = category === 'artifacts' ? 'block' : 'none';
+  document.getElementById('folder-search').value = '';
+  folderItems.forEach(i => i.classList.remove('filtered-out'));
+  updateFolderEmptyStates();
+}
+
+function backToRoot() {
+  currentCategory = null;
+  folderRoot.style.display = 'block';
+  folderCategoryView.style.display = 'none';
+  folderItems.forEach(i => i.classList.remove('active'));
+  document.querySelectorAll('.char-panel').forEach(p => p.classList.remove('active'));
+  charEmpty.style.display = 'flex';
+}
+
+document.querySelectorAll('.category-folder-item').forEach(el => el.onclick = () => openCategory(el.dataset.category));
+document.getElementById('folder-back-btn').onclick = backToRoot;
+
 document.getElementById('folder-search').addEventListener('input', e => {
   const q = e.target.value.trim().toLowerCase();
   folderItems.forEach(item => {
     const match = !q || item.textContent.toLowerCase().includes(q);
     item.classList.toggle('filtered-out', !match);
   });
-  folderGroups.forEach(group => {
-    const anyVisible = [...group.querySelectorAll('.folder-item')].some(i => !i.classList.contains('filtered-out'));
-    group.classList.toggle('search-empty', !!q && !anyVisible);
-  });
+  updateFolderEmptyStates();
 });
 folderItems.forEach(item => item.onclick = async () => {
   folderItems.forEach(i => i.classList.remove('active'));
