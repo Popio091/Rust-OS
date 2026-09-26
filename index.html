@@ -210,6 +210,16 @@
   }
   #folder-search:focus { border-color: var(--accent); }
 
+  .folder-group { margin-top: 4px; }
+  .folder-group.search-empty .group-label,
+  .folder-group.search-empty .folder-group-empty { display: none; }
+  .folder-group-empty {
+    padding: 4px 14px 12px;
+    font-size: 11.5px;
+    color: var(--dark-text-dim);
+    font-style: italic;
+  }
+
   .char-area {
     flex: 1;
     display: flex;
@@ -553,19 +563,26 @@
       <div class="win-btn close" data-action="close" data-target="database">&#x2715;</div>
     </div>
     <div class="window-body">
-      <!-- Folder list is built by renderCharacters() from the CHARACTERS array in the script below.
-           To add a character: add one entry to CHARACTERS here AND to the matching CHARACTERS
-           array near the top of server.js, then redeploy. -->
+      <!-- Folder lists are built by renderDatabaseItems() from the CHARACTERS and ARTIFACTS
+           arrays in the script below. To add an entry: add it to the matching array here
+           AND to the flat ITEM_KEYS array near the top of server.js, then redeploy. -->
       <div class="folder-sidebar">
-        <div class="group-label">Characters</div>
         <input type="text" id="folder-search" placeholder="Search&hellip;" autocomplete="off">
-        <div id="folder-sidebar-items"></div>
+        <div class="folder-group" data-group="characters">
+          <div class="group-label">Characters</div>
+          <div class="folder-group-items" id="folder-sidebar-characters"></div>
+        </div>
+        <div class="folder-group" data-group="artifacts">
+          <div class="group-label">Artifacts</div>
+          <div class="folder-group-items" id="folder-sidebar-artifacts"></div>
+          <div class="folder-group-empty" id="folder-empty-artifacts">No artifacts yet.</div>
+        </div>
       </div>
 
       <div class="char-area" id="char-area">
         <div class="upload-row" id="upload-row"><button id="upload-text-btn">Upload Text</button><button id="upload-image-btn">Upload Image</button><input id="upload-file" type="file" hidden><label class="autosave-toggle"><input type="checkbox" id="autosave-toggle"> Autosave</label></div>
         <div class="char-empty" id="char-empty">Select a character folder on the left.</div>
-        <!-- Character panels are appended here by renderCharacters() -->
+        <!-- Character and artifact panels are appended here by renderDatabaseItems() -->
       </div>
     </div>
     <div class="status-bar" id="db-statusbar">Ready</div>
@@ -652,56 +669,89 @@ const CHARACTERS = [
   { key: 'pokedex', label: 'Pokédex' }
 ];
 
+// ---- Artifacts shown in the Database window. Works exactly like CHARACTERS. ----
+// To add an artifact: add one entry here, add the matching key to the
+// ITEM_KEYS array near the top of server.js, then redeploy.
+const ARTIFACTS = [
+  { key: 'chaosemeralds', label: 'Chaos Emeralds' },
+  { key: 'superemeralds', label: 'Super Emeralds' },
+  { key: 'masteremerald', label: 'Master Emerald' },
+  { key: 'warprings', label: 'Warp Rings' },
+  { key: 'worldrings', label: '7 World Rings' }
+];
+
+// Combined list used for anything that treats every folder the same way
+// (loading, saving, autosave, formatting, permissions).
+const ALL_ITEMS = [
+  ...CHARACTERS.map(c => ({ ...c, category: 'characters' })),
+  ...ARTIFACTS.map(a => ({ ...a, category: 'artifacts' }))
+];
+
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-function renderCharacters() {
-  const sidebar = document.getElementById('folder-sidebar-items');
-  const area = document.getElementById('char-area');
-  // Sorted alphabetically by display label, so new characters just need to be added to
-  // the CHARACTERS array below (in any order) — the sidebar list order is automatic.
-  const sorted = [...CHARACTERS].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
-  sorted.forEach(({ key, label }) => {
-    const folderBtn = document.createElement('div');
-    folderBtn.className = 'folder-item';
-    folderBtn.dataset.char = key;
-    folderBtn.innerHTML = `<svg viewBox="0 0 40 32"><path fill="#5aa6e8" d="M2 6c0-1.1.9-2 2-2h11l3 4h18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2z"/></svg>${esc(label)}`;
-    sidebar.appendChild(folderBtn);
-
-    const panel = document.createElement('div');
-    panel.className = 'char-panel';
-    panel.id = 'panel-' + key;
-    panel.innerHTML = `
-      <div class="char-panel-header"><h2>${esc(label)}</h2></div>
-      <div class="char-content">
-        <div class="char-image-box">
-          <div class="char-image-frame">
-            <svg class="placeholder-icon" id="placeholder-${key}" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
-            </svg>
-            <img id="img-${key}" alt="${esc(label)}">
-          </div>
-          <div class="char-image-filename" id="image-filename-${key}">No image selected</div>
-        </div>
-        <div class="char-text-box">
-          <div class="text-toolbar">
-            <button id="open-text-${key}">Refresh</button>
-            <button id="save-text-${key}" disabled>Save</button>
-            <button id="saveas-text-${key}" disabled>Save As&hellip;</button>
-            <span class="toolbar-divider-v"></span>
-            <button id="bold-${key}" class="fmt-bold" title="Bold" disabled>B</button>
-            <button id="italic-${key}" class="fmt-italic" title="Italic" disabled>I</button>
-            <button id="list-${key}" title="Bulleted list" disabled>&bull; List</button>
-            <span class="text-filename" id="filename-${key}">No file open</span>
-          </div>
-          <textarea class="char-textarea" id="textarea-${key}" placeholder="No text file yet for ${esc(label)}."></textarea>
-        </div>
-      </div>`;
-    area.appendChild(panel);
-  });
+function buildFolderItem(key, label) {
+  const folderBtn = document.createElement('div');
+  folderBtn.className = 'folder-item';
+  folderBtn.dataset.char = key;
+  folderBtn.innerHTML = `<svg viewBox="0 0 40 32"><path fill="#5aa6e8" d="M2 6c0-1.1.9-2 2-2h11l3 4h18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2z"/></svg>${esc(label)}`;
+  return folderBtn;
 }
-renderCharacters();
+
+function buildPanel(key, label) {
+  const panel = document.createElement('div');
+  panel.className = 'char-panel';
+  panel.id = 'panel-' + key;
+  panel.innerHTML = `
+    <div class="char-panel-header"><h2>${esc(label)}</h2></div>
+    <div class="char-content">
+      <div class="char-image-box">
+        <div class="char-image-frame">
+          <svg class="placeholder-icon" id="placeholder-${key}" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/>
+          </svg>
+          <img id="img-${key}" alt="${esc(label)}">
+        </div>
+        <div class="char-image-filename" id="image-filename-${key}">No image selected</div>
+      </div>
+      <div class="char-text-box">
+        <div class="text-toolbar">
+          <button id="open-text-${key}">Refresh</button>
+          <button id="save-text-${key}" disabled>Save</button>
+          <button id="saveas-text-${key}" disabled>Save As&hellip;</button>
+          <span class="toolbar-divider-v"></span>
+          <button id="bold-${key}" class="fmt-bold" title="Bold" disabled>B</button>
+          <button id="italic-${key}" class="fmt-italic" title="Italic" disabled>I</button>
+          <button id="list-${key}" title="Bulleted list" disabled>&bull; List</button>
+          <span class="text-filename" id="filename-${key}">No file open</span>
+        </div>
+        <textarea class="char-textarea" id="textarea-${key}" placeholder="No text file yet for ${esc(label)}."></textarea>
+      </div>
+    </div>`;
+  return panel;
+}
+
+function renderDatabaseItems() {
+  const area = document.getElementById('char-area');
+  // Sorted alphabetically by display label within each category, so new entries just need
+  // to be added to CHARACTERS/ARTIFACTS below (in any order) — order in the sidebar is automatic.
+  const sortByLabel = (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+
+  const charSidebar = document.getElementById('folder-sidebar-characters');
+  [...CHARACTERS].sort(sortByLabel).forEach(({ key, label }) => {
+    charSidebar.appendChild(buildFolderItem(key, label));
+    area.appendChild(buildPanel(key, label));
+  });
+
+  const artifactSidebar = document.getElementById('folder-sidebar-artifacts');
+  [...ARTIFACTS].sort(sortByLabel).forEach(({ key, label }) => {
+    artifactSidebar.appendChild(buildFolderItem(key, label));
+    area.appendChild(buildPanel(key, label));
+  });
+  document.getElementById('folder-empty-artifacts').style.display = ARTIFACTS.length ? 'none' : 'block';
+}
+renderDatabaseItems();
 
 const windows = {
   database: {
@@ -871,12 +921,17 @@ async function loadCharacter(key) {
 }
 
 const folderItems = document.querySelectorAll('.folder-item');
+const folderGroups = document.querySelectorAll('.folder-group');
 const charEmpty = document.getElementById('char-empty');
 document.getElementById('folder-search').addEventListener('input', e => {
   const q = e.target.value.trim().toLowerCase();
   folderItems.forEach(item => {
     const match = !q || item.textContent.toLowerCase().includes(q);
     item.classList.toggle('filtered-out', !match);
+  });
+  folderGroups.forEach(group => {
+    const anyVisible = [...group.querySelectorAll('.folder-item')].some(i => !i.classList.contains('filtered-out'));
+    group.classList.toggle('search-empty', !!q && !anyVisible);
   });
 });
 folderItems.forEach(item => item.onclick = async () => {
@@ -955,7 +1010,7 @@ function saveCharacterText(key, opts = {}) {
   return next;
 }
 
-CHARACTERS.map(c => c.key).forEach(key => {
+ALL_ITEMS.map(i => i.key).forEach(key => {
   const ta = document.getElementById('textarea-' + key);
   const saveBtn = document.getElementById('save-text-' + key);
   ta.oninput = () => {
@@ -1006,7 +1061,7 @@ async function setUser() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('account-name').textContent = `${u.user} (${u.role === 'editor' ? 'Editor' : 'Read only'})`;
     document.getElementById('upload-row').classList.toggle('visible', canEdit);
-    CHARACTERS.map(c => c.key).forEach(k => {
+    ALL_ITEMS.map(i => i.key).forEach(k => {
       document.getElementById('textarea-' + k).readOnly = !canEdit;
       document.getElementById('save-text-' + k).disabled = !canEdit;
       document.getElementById('saveas-text-' + k).disabled = !canEdit;

@@ -13,15 +13,19 @@ const DATA = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.jo
 const FILES = path.join(DATA, 'files');
 const MAX_UPLOAD = 10 * 1024 * 1024;
 
-// Character folders. Must match the CHARACTERS array in RustOS.html / index.html.
-// To add a character: add its key here AND to that array, then redeploy.
-const CHARACTERS = [
+// Valid folder keys — covers both the "Characters" and "Artifacts" categories shown in
+// the Database window. The frontend (CHARACTERS + ARTIFACTS arrays in RustOS.html /
+// index.html) only needs a key to be listed *somewhere* here; storage itself doesn't
+// care which category a key belongs to. To add an entry: add its key here AND to the
+// matching category array in the frontend, then redeploy.
+const ITEM_KEYS = [
   'goku', 'sonic', 'goodwire', 'fg', 'rustthedgehog', 'bryce', 'milessa', 'flow',
   'tempest', 'tempestpendragon', 'artorius', 'comet', 'fluxen', 'takuya', 'takeru',
   'dawn', 'dusk', 'sorin', 'thedoctor', 'tinitus', 'lindoz', 'smudger', 'db',
   'crimson', 'mitis', 'gareth', 'gawain', 'agravain', 'apricity', 'kurotsuki',
   'sable', 'kirby', 'shadow', 'knuckles', 'tails', 'cream', 'sally', 'vanilla',
-  'amy', 'big', 'silver', 'blaze', 'pokedex'
+  'amy', 'big', 'silver', 'blaze', 'pokedex',
+  'chaosemeralds', 'superemeralds', 'masteremerald', 'warprings', 'worldrings'
 ];
 
 // GitHub-backed persistent storage (used in production instead of a Render disk).
@@ -60,7 +64,7 @@ const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '';
 const SESSIONS = new Map();
 
 if (!USE_GITHUB_STORAGE) {
-  for (const dir of [DATA, FILES, ...CHARACTERS.map(c => path.join(FILES, c))]) {
+  for (const dir of [DATA, FILES, ...ITEM_KEYS.map(c => path.join(FILES, c))]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }
@@ -74,7 +78,7 @@ function githubHeaders() {
   };
 }
 function githubPath(character, name = '') {
-  if (!CHARACTERS.includes(character)) throw new Error('Invalid character');
+  if (!ITEM_KEYS.includes(character)) throw new Error('Invalid character');
   return [GITHUB_PATH_PREFIX, character, name && safePart(name)].filter(Boolean).join('/');
 }
 async function githubRequest(method, apiPath, bodyJson) {
@@ -164,7 +168,7 @@ function session(req) {
 }
 function safePart(s) { return path.basename(String(s)); }
 function filePath(character, name) {
-  if (!CHARACTERS.includes(character)) throw new Error('Invalid character');
+  if (!ITEM_KEYS.includes(character)) throw new Error('Invalid character');
   return path.join(FILES, character, safePart(name));
 }
 function mime(name) {
@@ -263,7 +267,7 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/files' && req.method === 'GET') {
       const s = requireAuth(req, res); if (!s) return;
       const c = u.searchParams.get('character');
-      if (!CHARACTERS.includes(c)) return json(res, 400, { error: 'Invalid character' }, headers);
+      if (!ITEM_KEYS.includes(c)) return json(res, 400, { error: 'Invalid character' }, headers);
       let files;
       if (USE_GITHUB_STORAGE) {
         const items = await githubList(c);
