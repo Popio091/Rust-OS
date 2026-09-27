@@ -393,6 +393,32 @@
 
   textarea.char-textarea::placeholder { color: var(--dark-text-dim); }
 
+  .char-rendered {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--dark-bg);
+    color: var(--dark-text);
+    font-family: "Cascadia Code", "Consolas", "Courier New", monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 16px;
+    white-space: pre-wrap;
+    cursor: text;
+  }
+  .rendered-empty { color: var(--dark-text-dim); font-style: italic; }
+  .item-link {
+    color: #6db2ff;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .item-link:hover { color: #9ecbff; background: rgba(109,178,255,0.12); }
+  .item-link-broken {
+    color: var(--dark-text-dim);
+    text-decoration: underline dashed;
+    cursor: help;
+  }
+  .text-toolbar button.active-preview { background: var(--dark-selected); border-color: var(--accent); color: #fff; }
+
   .status-bar {
     height: 22px;
     background: var(--dark-panel);
@@ -734,6 +760,39 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// Turns **bold**/*italic* into real tags and %Some Name% into a clickable link to that
+// folder (matched by label, falling back to key, case-insensitively). Unmatched %refs%
+// are shown with a dashed underline so a typo is easy to spot.
+function applyInlineMarkdown(escapedText) {
+  return escapedText
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function findItemByNameOrKey(name) {
+  const q = name.trim().toLowerCase();
+  return ALL_ITEMS.find(i => i.label.toLowerCase() === q) || ALL_ITEMS.find(i => i.key.toLowerCase() === q);
+}
+
+function renderPreviewHTML(text) {
+  if (!text) return '';
+  const regex = /%([^%\n]+)%/g;
+  let lastIndex = 0, out = '', match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) out += applyInlineMarkdown(esc(text.slice(lastIndex, match.index)));
+    const name = match[1].trim();
+    const target = findItemByNameOrKey(name);
+    if (target) {
+      out += `<span class="item-link" data-target-key="${esc(target.key)}" title="Open ${esc(target.label)}">${applyInlineMarkdown(esc(name))}</span>`;
+    } else {
+      out += `<span class="item-link-broken" title="No file found named &quot;${esc(name)}&quot;">%${applyInlineMarkdown(esc(name))}%</span>`;
+    }
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) out += applyInlineMarkdown(esc(text.slice(lastIndex)));
+  return out;
+}
+
 function buildFolderItem(key, label) {
   const folderBtn = document.createElement('div');
   folderBtn.className = 'folder-item';
@@ -767,9 +826,12 @@ function buildPanel(key, label) {
           <button id="bold-${key}" class="fmt-bold" title="Bold" disabled>B</button>
           <button id="italic-${key}" class="fmt-italic" title="Italic" disabled>I</button>
           <button id="list-${key}" title="Bulleted list" disabled>&bull; List</button>
+          <span class="toolbar-divider-v"></span>
+          <button id="preview-${key}" title="Preview clickable %References%">Preview</button>
           <span class="text-filename" id="filename-${key}">No file open</span>
         </div>
         <textarea class="char-textarea" id="textarea-${key}" placeholder="No text file yet for ${esc(label)}."></textarea>
+        <div class="char-rendered" id="rendered-${key}" style="display:none;"></div>
       </div>
     </div>`;
   return panel;
@@ -954,6 +1016,7 @@ async function loadCharacter(key) {
     ta.value = ''; fn.textContent = 'No text file uploaded';
   }
   document.getElementById('save-text-' + key).classList.remove('unsaved');
+  document.getElementById('rendered-' + key).innerHTML = renderPreviewHTML(ta.value) || '<span class="rendered-empty">No text file yet.</span>';
   if (image) {
     try {
       const url = await fetchImageObjectUrl(key, image.name);
@@ -1025,15 +1088,27 @@ document.getElementById('folder-search').addEventListener('input', e => {
   });
   updateFolderEmptyStates();
 });
-folderItems.forEach(item => item.onclick = async () => {
+async function selectItem(key) {
   folderItems.forEach(i => i.classList.remove('active'));
-  item.classList.add('active');
-  const key = item.dataset.char;
+  const folderEl = document.querySelector('.folder-item[data-char="' + key + '"]');
+  if (folderEl) folderEl.classList.add('active');
   document.querySelectorAll('.char-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + key).classList.add('active');
   charEmpty.style.display = 'none';
   try { await loadCharacter(key); } catch (e) { dbStatusbar.textContent = e.message; }
-});
+}
+folderItems.forEach(item => item.onclick = () => selectItem(item.dataset.char));
+
+// Jumps to the folder a %Reference% link points to: switches category (if needed),
+// selects the folder, loads it, and scrolls it into view in the sidebar.
+async function navigateToItem(key) {
+  const target = ALL_ITEMS.find(i => i.key === key);
+  if (!target) { dbStatusbar.textContent = 'No file found for that reference.'; return; }
+  openCategory(target.category);
+  await selectItem(key);
+  const folderEl = document.querySelector('.folder-item[data-char="' + key + '"]');
+  if (folderEl) folderEl.scrollIntoView({ block: 'nearest' });
+}
 
 // ---- Basic text formatting (inserts Markdown syntax into the plain-text file) ----
 function applyWrap(textarea, before, after) {
@@ -1101,6 +1176,22 @@ function saveCharacterText(key, opts = {}) {
   return next;
 }
 
+function setPreviewMode(key, showPreview) {
+  const ta = document.getElementById('textarea-' + key);
+  const rendered = document.getElementById('rendered-' + key);
+  const btn = document.getElementById('preview-' + key);
+  if (showPreview) {
+    rendered.innerHTML = renderPreviewHTML(ta.value) || '<span class="rendered-empty">No text file yet.</span>';
+    rendered.style.display = 'block';
+    ta.style.display = 'none';
+    if (btn) { btn.textContent = 'Edit'; btn.classList.add('active-preview'); }
+  } else {
+    rendered.style.display = 'none';
+    ta.style.display = 'block';
+    if (btn) { btn.textContent = 'Preview'; btn.classList.remove('active-preview'); }
+  }
+}
+
 ALL_ITEMS.map(i => i.key).forEach(key => {
   const ta = document.getElementById('textarea-' + key);
   const saveBtn = document.getElementById('save-text-' + key);
@@ -1119,6 +1210,15 @@ ALL_ITEMS.map(i => i.key).forEach(key => {
   document.getElementById('bold-' + key).onclick = () => applyWrap(ta, '**', '**');
   document.getElementById('italic-' + key).onclick = () => applyWrap(ta, '*', '*');
   document.getElementById('list-' + key).onclick = () => applyListPrefix(ta);
+  document.getElementById('preview-' + key).onclick = () => {
+    const showingPreview = document.getElementById('rendered-' + key).style.display !== 'none';
+    setPreviewMode(key, !showingPreview);
+  };
+  document.getElementById('rendered-' + key).addEventListener('click', e => {
+    const link = e.target.closest('.item-link');
+    if (link) { navigateToItem(link.dataset.targetKey); return; }
+    if (canEdit) setPreviewMode(key, false); // click anywhere else in own preview switches back to editing
+  });
 });
 
 const autosaveToggle = document.getElementById('autosave-toggle');
@@ -1159,6 +1259,8 @@ async function setUser() {
       document.getElementById('bold-' + k).disabled = !canEdit;
       document.getElementById('italic-' + k).disabled = !canEdit;
       document.getElementById('list-' + k).disabled = !canEdit;
+      document.getElementById('preview-' + k).style.display = canEdit ? 'inline-block' : 'none';
+      if (!canEdit) setPreviewMode(k, true); // read-only accounts always see the clickable rendered view
     });
   } catch { document.getElementById('login-screen').style.display = 'flex'; }
 }
