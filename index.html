@@ -542,17 +542,21 @@
   .account-option strong { display:block; font-size:13px; }
   .account-option span { display:block; margin-top:3px; font-size:10px; color:#aaa; }
   .account-option.selected span { color:#d6e8ff; }
-  #background-btn { padding:4px 8px; margin-right:6px; background:#3a3a3c; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; }
-  #background-menu { position:fixed; right:12px; bottom:52px; z-index:100000; width:210px; background:var(--dark-panel); border:1px solid #000; box-shadow:0 8px 25px rgba(0,0,0,.5); padding:12px; color:#ddd; display:none; }
-  #background-menu h3 { margin:0 0 10px; font-size:13px; color:#fff; }
-  .bg-choice { display:flex; align-items:center; gap:8px; width:100%; padding:8px; margin:5px 0; background:#303033; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; text-align:left; }
+  #start-menu { position:fixed; left:8px; bottom:52px; z-index:100000; width:250px; padding:10px; box-sizing:border-box; display:none; background:var(--dark-panel); color:#ddd; border:1px solid #000; box-shadow:0 8px 25px rgba(0,0,0,.55); }
+  #start-menu.open { display:block; }
+  .start-menu-header { padding:10px 8px 12px; margin-bottom:8px; border-bottom:1px solid var(--dark-border); color:#fff; font-size:13px; overflow-wrap:anywhere; }
+  .start-menu-header small { display:block; margin-top:4px; color:var(--dark-text-dim); font-size:11px; }
+  .start-menu-action { display:flex; align-items:center; gap:10px; width:100%; padding:10px 9px; margin:3px 0; background:transparent; border:1px solid transparent; color:#ddd; cursor:pointer; text-align:left; font-size:13px; }
+  .start-menu-action:hover { background:#3b3b3e; border-color:#4a4a4d; }
+  #background-menu { display:none; padding:4px 0 5px 25px; color:#ddd; }
+  #background-menu h3 { margin:0 0 6px; font-size:11px; font-weight:normal; color:var(--dark-text-dim); }
+  .bg-choice { display:flex; align-items:center; gap:8px; width:100%; padding:8px; margin:4px 0; background:#303033; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; text-align:left; }
   .bg-choice:hover { background:#3b3b3e; }
-  .bg-swatch { width:24px; height:18px; border:1px solid #666; display:inline-block; }
+  .bg-swatch { width:24px; height:18px; border:1px solid #666; display:inline-block; flex-shrink:0; }
   #login-btn { width:100%; margin-top:16px; padding:9px; border:1px solid #4a4a4d; background:#3a3a3c; color:#fff; cursor:pointer; }
   #login-btn:hover { background:#464648; }
   #login-error { min-height:16px; margin-top:10px; color:#ff7b7b; font-size:12px; }
   #account-area { margin-left:auto; display:flex; align-items:center; gap:8px; padding:0 12px; font-size:12px; }
-  #logout-btn { padding:4px 8px; background:#3a3a3c; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; }
   .upload-row { display:none; gap:6px; padding:8px 12px; background:var(--dark-panel); border-bottom:1px solid var(--dark-border); align-items:center; }
   .autosave-toggle { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:12px; color:var(--dark-text); cursor:pointer; }
   .autosave-toggle input { cursor:pointer; }
@@ -672,13 +676,18 @@
   </div>
   <div class="taskbar-divider"></div>
   <div id="taskbar-items"></div>
-  <div id="account-area"><span id="account-name"></span><button id="background-btn" type="button">Background</button><button id="logout-btn">Log out</button></div>
+  <div id="account-area"><span id="account-name"></span></div>
   <div id="clock"></div>
 </div>
-<div id="background-menu">
-  <h3>Desktop Background</h3>
-  <button class="bg-choice" data-bg="black"><span class="bg-swatch" style="background:#000"></span> Black</button>
-  <button class="bg-choice" data-bg="blue"><span class="bg-swatch" style="background:linear-gradient(160deg,#1e5fa8,#123a6b)"></span> Blue</button>
+<div id="start-menu" role="menu" aria-hidden="true">
+  <div class="start-menu-header"><span id="start-menu-account">RustOS</span><small>System options</small></div>
+  <button id="background-btn" class="start-menu-action" type="button" aria-expanded="false">▧ <span>Background</span></button>
+  <div id="background-menu">
+    <h3>Desktop Background</h3>
+    <button class="bg-choice" data-bg="black"><span class="bg-swatch" style="background:#000"></span> Black</button>
+    <button class="bg-choice" data-bg="blue"><span class="bg-swatch" style="background:linear-gradient(160deg,#1e5fa8,#123a6b)"></span> Blue</button>
+  </div>
+  <button id="logout-btn" class="start-menu-action" type="button">↪ <span>Log out</span></button>
 </div>
 
 <script src="config.js"></script>
@@ -974,9 +983,47 @@ function applyBackground(name) {
   localStorage.setItem('rustos_background', name);
 }
 applyBackground(localStorage.getItem('rustos_background') || 'black');
-document.getElementById('background-btn').onclick = e => { e.stopPropagation(); backgroundMenu.style.display = backgroundMenu.style.display === 'block' ? 'none' : 'block'; };
-document.querySelectorAll('.bg-choice').forEach(b => b.onclick = () => { applyBackground(b.dataset.bg); backgroundMenu.style.display = 'none'; });
-document.addEventListener('click', e => { if (!backgroundMenu.contains(e.target) && e.target.id !== 'background-btn') backgroundMenu.style.display = 'none'; });
+const startButton = document.getElementById('start-btn');
+const startMenu = document.getElementById('start-menu');
+const backgroundButton = document.getElementById('background-btn');
+function closeStartMenu() {
+  startMenu.classList.remove('open');
+  startMenu.setAttribute('aria-hidden', 'true');
+  startButton.setAttribute('aria-expanded', 'false');
+  backgroundMenu.style.display = 'none';
+  backgroundButton.setAttribute('aria-expanded', 'false');
+}
+function toggleStartMenu() {
+  const shouldOpen = !startMenu.classList.contains('open');
+  closeStartMenu();
+  if (shouldOpen) {
+    startMenu.classList.add('open');
+    startMenu.setAttribute('aria-hidden', 'false');
+    startButton.setAttribute('aria-expanded', 'true');
+  }
+}
+startButton.setAttribute('role', 'button');
+startButton.setAttribute('tabindex', '0');
+startButton.setAttribute('aria-label', 'Open Start menu');
+startButton.setAttribute('aria-expanded', 'false');
+startButton.addEventListener('click', e => { e.stopPropagation(); toggleStartMenu(); });
+startButton.addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStartMenu(); }
+});
+startMenu.addEventListener('click', e => e.stopPropagation());
+backgroundButton.onclick = e => {
+  e.stopPropagation();
+  const show = backgroundMenu.style.display !== 'block';
+  backgroundMenu.style.display = show ? 'block' : 'none';
+  backgroundButton.setAttribute('aria-expanded', String(show));
+};
+document.querySelectorAll('.bg-choice').forEach(b => b.onclick = () => {
+  applyBackground(b.dataset.bg);
+  backgroundMenu.style.display = 'none';
+  backgroundButton.setAttribute('aria-expanded', 'false');
+});
+document.addEventListener('click', closeStartMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStartMenu(); });
 
 document.querySelectorAll('.account-option').forEach(b => b.onclick = () => {
   document.querySelectorAll('.account-option').forEach(x => x.classList.remove('selected'));
@@ -1361,6 +1408,8 @@ async function setUser() {
     currentUser = u.user; canEdit = u.role === 'editor';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('account-name').textContent = `${u.user} (${u.role === 'editor' ? 'Editor' : 'Read only'})`;
+    const startMenuAccount = document.getElementById('start-menu-account');
+    if (startMenuAccount) startMenuAccount.textContent = `${u.user} (${u.role === 'editor' ? 'Editor' : 'Read only'})`;
     document.getElementById('upload-row').classList.toggle('visible', canEdit);
     ALL_ITEMS.map(i => i.key).forEach(k => {
       document.getElementById('textarea-' + k).readOnly = !canEdit;
@@ -1399,6 +1448,7 @@ document.getElementById('login-card').onsubmit = async e => {
   } catch (x) { err.textContent = x.message; }
 };
 document.getElementById('logout-btn').onclick = async () => {
+  closeStartMenu();
   try { await api('/api/logout', { method: 'POST' }); } finally { localStorage.removeItem('rustos_token'); location.reload(); }
 };
 setUser();

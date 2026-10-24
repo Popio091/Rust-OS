@@ -139,42 +139,6 @@ async function githubPut(character, name, buffer, message) {
   return githubRequest('PUT', `/repos/${encodeURIComponent(GITHUB_OWNER)}/${encodeURIComponent(GITHUB_REPO)}/contents/${p}`, payload);
 }
 
-// Standard Markdown stats sheet used for newly-created entry text files.
-function defaultStatsTemplate(key) {
-  const title = key.replace(/[-_]+/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
-  return `# ${title}\n\n| Statistic | Details |\n| --- | --- |\n| Attack | |\n| Ranged Attack | |\n| Defense | |\n| Speed | |\n| Agility | |\n| Stamina | |\n| Durability | |\n| Intelligence | |\n| Combat Skill | |\n| Special Abilities | |\n| Weaknesses | |\n| Power Level | |\n`;
-}
-
-// Creates key.txt only when that entry does not already have a .txt file.
-// Existing files are never overwritten. Called through an editor-only admin endpoint.
-async function backfillMissingTextFiles() {
-  const result = { created: [], skipped: 0, checked: ITEM_KEYS.length };
-  for (const key of ITEM_KEYS) {
-    let files;
-    if (USE_GITHUB_STORAGE) {
-      files = await githubList(key);
-    } else {
-      const dir = path.join(FILES, key);
-      files = fs.readdirSync(dir, { withFileTypes: true })
-        .filter(entry => entry.isFile())
-        .map(entry => ({ name: entry.name }));
-    }
-    if (files.some(file => /\.txt$/i.test(file.name))) {
-      result.skipped++;
-      continue;
-    }
-    const filename = `${key}.txt`;
-    const content = Buffer.from(defaultStatsTemplate(key), 'utf8');
-    if (USE_GITHUB_STORAGE) {
-      await githubPut(key, filename, content, `RustOS: create missing stats template ${key}.txt`);
-    } else {
-      fs.writeFileSync(filePath(key, filename), content);
-    }
-    result.created.push(`${key}/${filename}`);
-  }
-  return result;
-}
-
 function corsHeaders(req) {
   const origin = req.headers.origin;
   const allowed = FRONTEND_ORIGIN && origin === FRONTEND_ORIGIN ? origin : null;
@@ -302,12 +266,6 @@ const server = http.createServer(async (req, res) => {
       if (sid) SESSIONS.delete(sid);
       headers['Set-Cookie'] = cookieHeader('', 0);
       return json(res, 200, { ok: true }, headers);
-    }
-
-    if (u.pathname === '/api/admin/backfill-text-files' && req.method === 'POST') {
-      const s = requireEditor(req, res); if (!s) return;
-      const result = await backfillMissingTextFiles();
-      return json(res, 200, { ok: true, ...result }, headers);
     }
 
     if (u.pathname === '/api/files' && req.method === 'GET') {
