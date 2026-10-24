@@ -1,0 +1,124 @@
+name: Backfill missing RustOS text files
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out RustOS configuration
+        uses: actions/checkout@v4
+
+      - name: Create missing TXT files for every database category
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          REPO = os.environ["GH_REPOSITORY"]
+          BRANCH = "rustos-data"
+          PREFIX = "RustOS/rustos-data"
+          TOKEN = os.environ["GH_TOKEN"]
+          API = "https://api.github.com"
+
+          # Read the same master entry list used by the RustOS backend.
+          with open("server.js", encoding="utf-8") as f:
+              server_source = f.read()
+          match = re.search(r"const ITEM_KEYS = \[(.*?)\];", server_source, re.S)
+          if not match:
+              raise RuntimeError("Could not find ITEM_KEYS in server.js; stopping safely.")
+          keys = re.findall(r"'([^']+)'", match.group(1))
+          if not keys:
+              raise RuntimeError("ITEM_KEYS was empty; stopping safely.")
+
+          def request(method, url, payload=None, allow_missing=False):
+              data = json.dumps(payload).encode() if payload is not None else None
+              headers = {
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {TOKEN}",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "User-Agent": "RustOS-backfill",
+              }
+              if data is not None:
+                  headers["Content-Type"] = "application/json"
+              req = urllib.request.Request(url, data=data, method=method, headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      body = response.read().decode()
+                      return json.loads(body) if body else {}
+              except urllib.error.HTTPError as exc:
+                  details = exc.read().decode(errors="replace")
+                  if allow_missing and exc.code == 404:
+                      return None
+                  if exc.code == 422 and "already exists" in details.lower():
+                      return {"already_exists": True}
+                  raise RuntimeError(f"GitHub API {exc.code}: {details}") from exc
+
+          template = """| Statistic | Details |
+          | --- | --- |
+          | Attack | |
+          | Ranged Attack | |
+          | Defense | |
+          | Speed | |
+          | Agility | |
+          | Stamina | |
+          | Durability | |
+          | Intelligence | |
+          | Combat Skill | |
+          | Special Abilities | |
+          | Weaknesses | |
+          | Power Level | |
+          """
+
+          created = 0
+          skipped = 0
+          for key in keys:
+              folder_path = f"{PREFIX}/{key}"
+              folder_url = (
+                  f"{API}/repos/{REPO}/contents/"
+                  f"{urllib.parse.quote(folder_path, safe='/')}?"
+                  f"ref={urllib.parse.quote(BRANCH, safe='')}"
+              )
+              entries = request("GET", folder_url, allow_missing=True)
+              files = entries if isinstance(entries, list) else []
+
+              # Keep any existing .txt file, regardless of its filename.
+              if any(item.get("type") == "file" and item.get("name", "").lower().endswith(".txt")
+                     for item in files):
+                  skipped += 1
+                  continue
+
+              title = re.sub(r"[-_]+", " ", key).title()
+              content = f"# {title}\n\n" + template
+              target_path = f"{folder_path}/{key}.txt"
+              target_url = (
+                  f"{API}/repos/{REPO}/contents/"
+                  f"{urllib.parse.quote(target_path, safe='/')}"
+              )
+              result = request("PUT", target_url, {
+                  "message": f"RustOS: add missing stats TXT for {key}",
+                  "content": base64.b64encode(content.encode()).decode(),
+                  "branch": BRANCH,
+              })
+              if result.get("already_exists"):
+                  skipped += 1
+              else:
+                  created += 1
+                  print(f"Created {target_path}")
+
+          print(f"Finished: created {created} TXT file(s), skipped {skipped} entries that already had a TXT file. Checked {len(keys)} entries across all RustOS categories.")
+          PY
