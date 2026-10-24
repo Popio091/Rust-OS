@@ -1,0 +1,16 @@
+# Darkspineform
+
+| Statistic | Details |
+| --- | --- |
+| Attack | |
+| Ranged Attack | |
+| Defense | |
+| Speed | |
+| Agility | |
+| Stamina | |
+| Durability | |
+| Intelligence | |
+| Combat Skill | |
+| Special Abilities | |
+| Weaknesses | |
+| Power Level | |
