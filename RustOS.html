@@ -405,6 +405,23 @@
     white-space: pre-wrap;
     cursor: text;
   }
+  .char-rendered table {
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin: 8px 0 14px;
+    max-width: 100%;
+    white-space: normal;
+    font-family: "Segoe UI", Tahoma, Verdana, Arial, sans-serif;
+  }
+  .char-rendered th, .char-rendered td {
+    border: 1px solid var(--dark-border);
+    padding: 6px 9px;
+    text-align: left;
+    vertical-align: top;
+    min-width: 70px;
+  }
+  .char-rendered th { background: var(--dark-panel); color: #fff; }
+  .char-rendered tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
   .rendered-empty { color: var(--dark-text-dim); font-style: italic; }
   .item-link {
     color: #6db2ff;
@@ -803,12 +820,11 @@ function findItemByNameOrKey(name) {
   return ALL_ITEMS.find(i => i.label.toLowerCase() === q) || ALL_ITEMS.find(i => i.key.toLowerCase() === q);
 }
 
-function renderPreviewHTML(text) {
-  if (!text) return '';
+function renderInlinePreview(rawText) {
   const regex = /%([^%\n]+)%/g;
   let lastIndex = 0, out = '', match;
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) out += applyInlineMarkdown(esc(text.slice(lastIndex, match.index)));
+  while ((match = regex.exec(rawText)) !== null) {
+    if (match.index > lastIndex) out += applyInlineMarkdown(esc(rawText.slice(lastIndex, match.index)));
     const name = match[1].trim();
     const target = findItemByNameOrKey(name);
     if (target) {
@@ -818,8 +834,48 @@ function renderPreviewHTML(text) {
     }
     lastIndex = regex.lastIndex;
   }
-  if (lastIndex < text.length) out += applyInlineMarkdown(esc(text.slice(lastIndex)));
+  if (lastIndex < rawText.length) out += applyInlineMarkdown(esc(rawText.slice(lastIndex)));
   return out;
+}
+
+function isMarkdownTableDivider(line) {
+  const trimmed = line.trim();
+  if (!trimmed.includes('|')) return false;
+  const cells = trimmed.replace(/^\|/, '').replace(/\|$/, '').split('|');
+  return cells.length > 0 && cells.every(cell => /^\s*:?-{3,}:?\s*$/.test(cell));
+}
+
+function splitMarkdownTableRow(line) {
+  return line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+}
+
+function renderPreviewHTML(text) {
+  if (!text) return '';
+  const lines = text.replace(/\r\n?/g, '\n').split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length;) {
+    if (i + 1 < lines.length && lines[i].includes('|') && isMarkdownTableDivider(lines[i + 1])) {
+      const headers = splitMarkdownTableRow(lines[i]);
+      const columnCount = Math.max(headers.length, splitMarkdownTableRow(lines[i + 1]).length);
+      out.push('<table><thead><tr>');
+      for (let col = 0; col < columnCount; col++) out.push('<th>' + renderInlinePreview(headers[col] || '') + '</th>');
+      out.push('</tr></thead><tbody>');
+      i += 2;
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim() !== '') {
+        const cells = splitMarkdownTableRow(lines[i]);
+        out.push('<tr>');
+        for (let col = 0; col < columnCount; col++) out.push('<td>' + renderInlinePreview(cells[col] || '') + '</td>');
+        out.push('</tr>');
+        i++;
+      }
+      out.push('</tbody></table>');
+      continue;
+    }
+    out.push(renderInlinePreview(lines[i]));
+    if (i < lines.length - 1) out.push('\n');
+    i++;
+  }
+  return out.join('');
 }
 
 function buildFolderItem(key, label) {
@@ -855,6 +911,8 @@ function buildPanel(key, label) {
           <button id="bold-${key}" class="fmt-bold" title="Bold" disabled>B</button>
           <button id="italic-${key}" class="fmt-italic" title="Italic" disabled>I</button>
           <button id="list-${key}" title="Bulleted list" disabled>&bull; List</button>
+          <button id="table-${key}" title="Insert a Markdown table" disabled>Table</button>
+          <button id="stats-${key}" title="Insert the character stats template" disabled>Stats</button>
           <span class="toolbar-divider-v"></span>
           <button id="preview-${key}" title="Preview clickable %References%">Preview</button>
           <span class="text-filename" id="filename-${key}">No file open</span>
@@ -1036,7 +1094,7 @@ async function loadCharacter(key) {
   const ta = document.getElementById('textarea-' + key), fn = document.getElementById('filename-' + key),
         img = document.getElementById('img-' + key), ph = document.getElementById('placeholder-' + key),
         il = document.getElementById('image-filename-' + key);
-  const text = d.files.find(f => /\.(txt|md|log|csv)$/i.test(f.name));
+  const text = d.files.find(f => /\.txt$/i.test(f.name)) || d.files.find(f => /\.(md|log|csv)$/i.test(f.name));
   const image = d.files.find(f => /^image\//.test(f.mime));
   if (text) {
     const t = await api('/api/files/' + encodeURIComponent(key) + '/' + encodeURIComponent(text.name));
@@ -1174,6 +1232,27 @@ function applyListPrefix(textarea) {
   textarea.dispatchEvent(new Event('input'));
 }
 
+function insertAtCursor(textarea, snippet) {
+  if (textarea.readOnly) return;
+  const start = textarea.selectionStart, end = textarea.selectionEnd, value = textarea.value;
+  const prefix = start > 0 && value[start - 1] !== '\n' ? '\n' : '';
+  const suffix = end < value.length && value[end] !== '\n' ? '\n' : '';
+  const insertion = prefix + snippet + suffix;
+  textarea.value = value.slice(0, start) + insertion + value.slice(end);
+  const cursor = start + insertion.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursor, cursor);
+  textarea.dispatchEvent(new Event('input'));
+}
+
+function insertMarkdownTable(textarea) {
+  insertAtCursor(textarea, '| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| | | |\n| | | |');
+}
+
+function insertStatsTemplate(textarea) {
+  insertAtCursor(textarea, '# Character Stats\n\n| Statistic | Details |\n| --- | --- |\n| Attack | |\n| Ranged Attack | |\n| Defense | |\n| Speed | |\n| Agility | |\n| Stamina | |\n| Durability | |\n| Intelligence | |\n| Combat Skill | |\n| Special Abilities | |\n| Weaknesses | |\n| Power Level | |');
+}
+
 // ---- Autosave (Host only) ----
 let autosaveEnabled = localStorage.getItem('rustos_autosave') !== 'false'; // defaults on
 const autosaveTimers = {};
@@ -1239,6 +1318,8 @@ ALL_ITEMS.map(i => i.key).forEach(key => {
   document.getElementById('bold-' + key).onclick = () => applyWrap(ta, '**', '**');
   document.getElementById('italic-' + key).onclick = () => applyWrap(ta, '*', '*');
   document.getElementById('list-' + key).onclick = () => applyListPrefix(ta);
+  document.getElementById('table-' + key).onclick = () => insertMarkdownTable(ta);
+  document.getElementById('stats-' + key).onclick = () => insertStatsTemplate(ta);
   document.getElementById('preview-' + key).onclick = () => {
     const showingPreview = document.getElementById('rendered-' + key).style.display !== 'none';
     setPreviewMode(key, !showingPreview);
@@ -1288,9 +1369,22 @@ async function setUser() {
       document.getElementById('bold-' + k).disabled = !canEdit;
       document.getElementById('italic-' + k).disabled = !canEdit;
       document.getElementById('list-' + k).disabled = !canEdit;
+      document.getElementById('table-' + k).disabled = !canEdit;
+      document.getElementById('stats-' + k).disabled = !canEdit;
       document.getElementById('preview-' + k).style.display = canEdit ? 'inline-block' : 'none';
       if (!canEdit) setPreviewMode(k, true); // read-only accounts always see the clickable rendered view
     });
+    if (canEdit && !sessionStorage.getItem('rustos_backfill_checked')) {
+      try {
+        const result = await api('/api/admin/backfill-text-files', { method: 'POST' });
+        sessionStorage.setItem('rustos_backfill_checked', '1');
+        dbStatusbar.textContent = result.created.length
+          ? `Created ${result.created.length} missing stats file(s); ${result.skipped} already had .txt files.`
+          : `Checked ${result.checked} entries; all already had .txt files.`;
+      } catch (e) {
+        dbStatusbar.textContent = 'Stats-file check failed: ' + e.message;
+      }
+    }
   } catch { document.getElementById('login-screen').style.display = 'flex'; }
 }
 
