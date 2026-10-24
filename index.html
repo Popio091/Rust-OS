@@ -743,13 +743,42 @@ const VERSES = [
   { key: 'dragonballsuper', label: 'Dragon Ball Super' }
 ];
 
+// ---- Transformations shown in the Database window. Works exactly like the others. ----
+// To add a transformation: add one entry here, add the matching key to the
+// ITEM_KEYS array near the top of server.js, then redeploy.
+const TRANSFORMATIONS = [
+  { key: 'superform', label: 'Super Form' },
+  { key: 'darkform', label: 'Dark Form' },
+  { key: 'hyperform', label: 'Hyper Form' },
+  { key: 'darkspineform', label: 'Darkspine Form' },
+  { key: 'werehog', label: 'Werehog' },
+  { key: 'excalibur', label: 'Excalibur' },
+  { key: 'knightarmor', label: 'Knight Armor' },
+  { key: 'overdrive', label: 'Overdrive' },
+  { key: 'kaioken', label: 'Kaio - ken' },
+  { key: 'ssj', label: 'SSJ' },
+  { key: 'ssj2', label: 'SSJ2' },
+  { key: 'ssj3', label: 'SSJ3' },
+  { key: 'ssj4', label: 'SSJ4 + ver.' },
+  { key: 'ssj5', label: 'SSJ5' },
+  { key: 'ssg', label: 'SSG' },
+  { key: 'ssjb', label: 'SSJB' },
+  { key: 'ssjbe', label: 'SSJBE' },
+  { key: 'uio', label: 'UIO' },
+  { key: 'mui', label: 'MUI' },
+  { key: 'ue', label: 'UE' },
+  { key: 'lssj', label: 'LSSJ' },
+  { key: 'chaoscharged', label: 'Chaos - charged' }
+];
+
 // One category = one folder in the Database's root view. To add a whole new category
 // (not just a new entry in an existing one), add another { id, label, items } object here —
 // no HTML changes needed, renderDatabaseItems() builds everything from this list.
 const CATEGORIES = [
   { id: 'characters', label: 'Characters', items: CHARACTERS },
   { id: 'artifacts', label: 'Artifacts', items: ARTIFACTS },
-  { id: 'verses', label: 'Verses', items: VERSES }
+  { id: 'verses', label: 'Verses', items: VERSES },
+  { id: 'transformations', label: 'Transformations', items: TRANSFORMATIONS }
 ];
 
 // Combined list used for anything that treats every folder the same way

@@ -26,7 +26,10 @@ const ITEM_KEYS = [
   'sable', 'kirby', 'shadow', 'knuckles', 'tails', 'cream', 'sally', 'vanilla',
   'amy', 'big', 'silver', 'blaze', 'pokedex',
   'chaosemeralds', 'superemeralds', 'masteremerald', 'warprings', 'worldrings',
-  'timewireb', 'timewireg', 'thevoid', 'thewhitespace', 'pulsesquad', 'dragonballsuper'
+  'timewireb', 'timewireg', 'thevoid', 'thewhitespace', 'pulsesquad', 'dragonballsuper',
+  'superform', 'darkform', 'hyperform', 'darkspineform', 'werehog', 'excalibur',
+  'knightarmor', 'overdrive', 'kaioken', 'ssj', 'ssj2', 'ssj3', 'ssj4', 'ssj5',
+  'ssg', 'ssjb', 'ssjbe', 'uio', 'mui', 'ue', 'lssj', 'chaoscharged'
 ];
 
 // GitHub-backed persistent storage (used in production instead of a Render disk).

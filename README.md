@@ -41,8 +41,8 @@ If the GitHub repository is public, files stored in the repository are also publ
 
 ## Database categories
 
-The Database window opens to a list of category folders (currently Characters, Artifacts,
-and Verses). Clicking one drills into its list of entries; all categories work identically —
+The Database window opens to a list of category folders (currently Characters, Artifacts, Verses,
+and Transformations). Clicking one drills into its list of entries; all categories work identically —
 same upload/save/autosave/formatting. Which category a folder shows up in depends only on
 which array its entry is in.
 
@@ -50,7 +50,7 @@ which array its entry is in.
 
 Entries are defined in two places that must stay in sync:
 
-1. In `RustOS.html` (and its copy, `index.html`), add `{ key: 'yourkey', label: 'Display Name' }` to the relevant array (`CHARACTERS`, `ARTIFACTS`, or `VERSES`).
+1. In `RustOS.html` (and its copy, `index.html`), add `{ key: 'yourkey', label: 'Display Name' }` to the relevant array (`CHARACTERS`, `ARTIFACTS`, `VERSES`, or `TRANSFORMATIONS`).
 2. In `server.js`, add `'yourkey'` to the `ITEM_KEYS` array (this one flat list covers every category — storage doesn't care which section a key appears in on the frontend).
 
 `yourkey` should be lowercase with no spaces (e.g. `pikachu`, `masteremerald`). After redeploying, the new folder appears in the right sidebar section automatically, sorted alphabetically; upload a text file and an image to it from the Host account.
