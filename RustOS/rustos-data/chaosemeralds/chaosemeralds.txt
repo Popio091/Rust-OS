@@ -8,3 +8,4 @@ they all are filled with an enrgy source called Chaos Energy, which provides a l
 - Explosion generation
 - Projectile-throwing
 
+All 7 of them
