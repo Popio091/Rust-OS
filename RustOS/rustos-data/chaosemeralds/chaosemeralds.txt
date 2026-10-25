@@ -20,3 +20,6 @@ They come in different colors; each emerald has its own one, wich include:
 
 Red
 Yellow
+Green
+Blue
+Cyan
