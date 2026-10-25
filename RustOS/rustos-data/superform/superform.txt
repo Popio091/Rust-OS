@@ -10,7 +10,7 @@ A state which had its origin first on the classic adventures starting in Emerald
 | %FG% | Yes & No |
 | %Flow% | Yes |
 | %Amy% | Yes |
-| %DB% | Yes |
+| %DB% |  |
 | %Shadow T. Hedgehog% | Yes |
 | %Silver% | Yes |
 | %Tempest T. Hedgehog% | Yes |
