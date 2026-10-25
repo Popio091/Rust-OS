@@ -695,7 +695,6 @@
     <button class="start-menu-action" id="background-btn" type="button"><span class="start-menu-icon">▧</span>Background options</button>
     <div id="background-menu"><h3>Choose desktop background</h3>
       <button class="bg-choice" data-bg="black"><span class="bg-swatch" style="background:#000"></span> Black</button>
-      <button class="bg-choice" data-bg="blue"><span class="bg-swatch" style="background:linear-gradient(160deg,#1e5fa8,#123a6b)"></span> Blue</button>
       <button class="bg-choice" data-bg="rustos"><span class="bg-swatch" style="background:linear-gradient(135deg,#020817,#006dff,#00d9ff)"></span> RustOS Electric</button>
     </div>
     <div class="start-section-title" style="margin-top:8px">System</div>
@@ -992,9 +991,8 @@ const bgWatermark = document.getElementById('bg-watermark');
 function applyBackground(name) {
   if (name === 'rustos') {
     desktop.style.background = 'linear-gradient(rgba(0,8,24,.12),rgba(0,8,24,.12)), url("rustos-wallpaper.jpg") center center / cover no-repeat';
-  } else if (name === 'blue') {
-    desktop.style.background = 'linear-gradient(160deg, #063c85 0%, #020b24 100%)';
   } else {
+    name = 'black';
     desktop.style.background = '#000';
   }
   bgWatermark.classList.toggle('visible', name === 'black');
@@ -1019,7 +1017,8 @@ backgroundButton.onclick = e => { e.stopPropagation(); const show = !backgroundM
 document.querySelectorAll('.bg-choice').forEach(b => b.onclick = () => { applyBackground(b.dataset.bg); backgroundMenu.classList.remove('open'); closeStartMenu(); });
 document.addEventListener('click', closeStartMenu);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStartMenu(); });
-applyBackground(localStorage.getItem('rustos_background') || 'rustos');
+const savedBackground = localStorage.getItem('rustos_background');
+applyBackground(savedBackground === 'black' ? 'black' : 'rustos');
 ['database','characters','artifacts','verses','transformations'].forEach(key => {
   const btn = document.getElementById('start-' + key);
   if (btn) btn.addEventListener('click', () => {

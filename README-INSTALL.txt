@@ -1,7 +1,12 @@
-RustOS Electric Desktop Update
+RustOS Wallpaper Update
 
-Upload/replace these files in the root of your GitHub Pages repository: index.html, RustOS.html, rustos-wallpaper.jpg. Keep server.js, config.js and .github/workflows/backfill-rustos-text.yml in their existing locations from the prior update.
+Included:
+- index.html
+- RustOS.html
+- rustos-wallpaper.jpg (new centered-R RustOS wallpaper, image only; no taskbar or UI)
 
-The new default wallpaper is static and uses rustos-wallpaper.jpg. The bottom-left R button opens the Start Menu. Background selection and Log Out now live inside the menu. The Start Menu and wallpaper are real page elements; the mockup UI is not baked into the wallpaper.
+The plain blue gradient background option has been removed. The available backgrounds are the new RustOS wallpaper and plain black.
 
-To deploy: commit the changed files and wait for GitHub Pages. No backend redeploy is needed for these frontend-only changes.
+Upload/replace these files in the root of your GitHub Pages repository. Keep config.js, server.js, and .github/workflows/backfill-rustos-text.yml in place.
+
+The website defaults to the new static wallpaper. If a browser previously saved the removed blue option, it will now use the RustOS wallpaper instead.
