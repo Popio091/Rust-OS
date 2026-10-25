@@ -39,6 +39,7 @@
     user-select: none;
   }
 
+  /* Static RustOS electric-blue wallpaper; no animated effects. */
   /* The big blue "R" shown on the black background. Toggled by applyBackground(). */
   #bg-watermark {
     position: absolute;
@@ -451,7 +452,8 @@
   /* ---------- Taskbar ---------- */
   #taskbar {
     height: var(--taskbar-h);
-    background: linear-gradient(180deg, #2a2a2a 0%, #101010 100%);
+    background: linear-gradient(180deg, rgba(2,17,40,.96) 0%, rgba(0,5,16,.98) 100%);
+    border-top: 1px solid #075cb8;
     border-top: 1px solid #000;
     display: flex;
     align-items: stretch;
@@ -542,17 +544,23 @@
   .account-option strong { display:block; font-size:13px; }
   .account-option span { display:block; margin-top:3px; font-size:10px; color:#aaa; }
   .account-option.selected span { color:#d6e8ff; }
-  #start-menu { position:fixed; left:8px; bottom:52px; z-index:100000; width:250px; padding:10px; box-sizing:border-box; display:none; background:var(--dark-panel); color:#ddd; border:1px solid #000; box-shadow:0 8px 25px rgba(0,0,0,.55); }
-  #start-menu.open { display:block; }
-  .start-menu-header { padding:10px 8px 12px; margin-bottom:8px; border-bottom:1px solid var(--dark-border); color:#fff; font-size:13px; overflow-wrap:anywhere; }
-  .start-menu-header small { display:block; margin-top:4px; color:var(--dark-text-dim); font-size:11px; }
-  .start-menu-action { display:flex; align-items:center; gap:10px; width:100%; padding:10px 9px; margin:3px 0; background:transparent; border:1px solid transparent; color:#ddd; cursor:pointer; text-align:left; font-size:13px; }
-  .start-menu-action:hover { background:#3b3b3e; border-color:#4a4a4d; }
-  #background-menu { display:none; padding:4px 0 5px 25px; color:#ddd; }
-  #background-menu h3 { margin:0 0 6px; font-size:11px; font-weight:normal; color:var(--dark-text-dim); }
-  .bg-choice { display:flex; align-items:center; gap:8px; width:100%; padding:8px; margin:4px 0; background:#303033; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; text-align:left; }
+  #start-menu { position:fixed; left:8px; bottom:52px; z-index:100000; width:min(520px,calc(100vw - 16px)); display:none; grid-template-columns:minmax(210px,1fr) minmax(170px,.9fr); gap:12px; padding:12px; color:#e6f0ff; background:rgba(3,12,29,.94); border:1px solid #087bff; border-radius:10px; box-shadow:0 12px 40px rgba(0,20,60,.65); backdrop-filter:blur(14px); }
+  #start-menu.open { display:grid; }
+  .start-left,.start-right { min-width:0; }
+  .start-user { display:flex; align-items:center; gap:10px; padding:7px 6px 13px; border-bottom:1px solid rgba(0,174,255,.35); margin-bottom:8px; }
+  .start-logo-large { width:44px;height:44px;display:grid;place-items:center;flex-shrink:0;border:1px solid #00bfff;border-radius:50%;color:#00bfff;font-size:29px;font-weight:800;text-shadow:0 0 12px #008cff; }
+  .start-user small { display:block;color:#70baff;margin-top:3px;font-size:11px; }
+  .start-menu-action { display:flex;align-items:center;gap:9px;width:100%;padding:9px 8px;margin:3px 0;background:transparent;border:1px solid transparent;border-radius:5px;color:#dceaff;cursor:pointer;text-align:left;font-size:12px; }
+  .start-menu-action:hover { background:rgba(0,110,255,.22);border-color:#087bff; }
+  .start-menu-action .start-menu-icon { width:22px;text-align:center;color:#35c8ff;font-size:16px; }
+  .start-section-title { font-size:11px;color:#69b8ff;text-transform:uppercase;letter-spacing:1px;padding:5px 3px; }
+  .start-right { border-left:1px solid rgba(0,174,255,.28);padding-left:12px; }
+  #background-menu { display:none; padding:2px 0 8px; }
+  #background-menu.open { display:block; }
+  #background-menu h3 { margin:0 0 7px; font-size:11px; color:#79c5ff; font-weight:normal; }
+  .bg-choice { display:flex; align-items:center; gap:8px; width:100%; padding:8px; margin:5px 0; background:#303033; border:1px solid #4a4a4d; color:#ddd; cursor:pointer; text-align:left; }
   .bg-choice:hover { background:#3b3b3e; }
-  .bg-swatch { width:24px; height:18px; border:1px solid #666; display:inline-block; flex-shrink:0; }
+  .bg-swatch { width:24px; height:18px; border:1px solid #666; display:inline-block; }
   #login-btn { width:100%; margin-top:16px; padding:9px; border:1px solid #4a4a4d; background:#3a3a3c; color:#fff; cursor:pointer; }
   #login-btn:hover { background:#464648; }
   #login-error { min-height:16px; margin-top:10px; color:#ff7b7b; font-size:12px; }
@@ -663,31 +671,36 @@
 </div>
 
 <div id="taskbar">
-  <div id="start-btn">
-    <!-- ==== CUSTOM LOGO ====
-         Swap this SVG for your own icon. Two easy options:
-         1) Edit the shapes below directly.
-         2) Replace this whole <svg> with <img class="start-logo" src="your-logo.png" alt="Start">
-    -->
-    <svg class="start-logo" viewBox="0 0 24 24">
-      <rect x="1" y="1" width="22" height="22" rx="5" fill="#3a3a3d"/>
-      <circle cx="12" cy="12" r="6" fill="#8ab4f8"/>
-    </svg>
-  </div>
+  <button id="start-btn" type="button" aria-label="Open RustOS Start Menu" aria-expanded="false" style="border:0;color:#fff;">
+    <svg class="start-logo" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="rustR" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#00e5ff"/><stop offset="1" stop-color="#075bff"/></linearGradient></defs><rect x="1" y="1" width="38" height="38" rx="8" fill="#03132c" stroke="#008cff"/><path d="M9 8h15c7 0 9 9 2 12l6 12h-9l-5-10h-3l-3 10H5l5-17h12c2 0 2-3 0-3H9z" fill="url(#rustR)" stroke="#6beaff" stroke-width=".6"/></svg>
+  </button>
   <div class="taskbar-divider"></div>
   <div id="taskbar-items"></div>
   <div id="account-area"><span id="account-name"></span></div>
   <div id="clock"></div>
 </div>
-<div id="start-menu" role="menu" aria-hidden="true">
-  <div class="start-menu-header"><span id="start-menu-account">RustOS</span><small>System options</small></div>
-  <button id="background-btn" class="start-menu-action" type="button" aria-expanded="false">▧ <span>Background</span></button>
-  <div id="background-menu">
-    <h3>Desktop Background</h3>
-    <button class="bg-choice" data-bg="black"><span class="bg-swatch" style="background:#000"></span> Black</button>
-    <button class="bg-choice" data-bg="blue"><span class="bg-swatch" style="background:linear-gradient(160deg,#1e5fa8,#123a6b)"></span> Blue</button>
+<div id="start-menu" aria-hidden="true">
+  <div class="start-left">
+    <div class="start-user"><div class="start-logo-large">R</div><div><strong id="start-menu-account">RustOS</strong><small id="start-menu-role">Account</small></div></div>
+    <div class="start-section-title">RustOS</div>
+    <button class="start-menu-action" id="start-database"><span class="start-menu-icon">▤</span>Database <span style="margin-left:auto">›</span></button>
+    <button class="start-menu-action" id="start-characters"><span class="start-menu-icon">♙</span>Characters</button>
+    <button class="start-menu-action" id="start-artifacts"><span class="start-menu-icon">◇</span>Artifacts</button>
+    <button class="start-menu-action" id="start-verses"><span class="start-menu-icon">◎</span>Verses</button>
+    <button class="start-menu-action" id="start-transformations"><span class="start-menu-icon">ϟ</span>Transformations</button>
+    <button class="start-menu-action" id="logout-btn" style="margin-top:12px;border-top:1px solid rgba(0,174,255,.3);padding-top:12px;color:#ff7a91"><span class="start-menu-icon" style="color:#ff5d78">⏻</span>Log Out</button>
   </div>
-  <button id="logout-btn" class="start-menu-action" type="button">↪ <span>Log out</span></button>
+  <div class="start-right">
+    <div class="start-section-title">Quick Settings</div>
+    <button class="start-menu-action" id="background-btn" type="button"><span class="start-menu-icon">▧</span>Background options</button>
+    <div id="background-menu"><h3>Choose desktop background</h3>
+      <button class="bg-choice" data-bg="black"><span class="bg-swatch" style="background:#000"></span> Black</button>
+      <button class="bg-choice" data-bg="blue"><span class="bg-swatch" style="background:linear-gradient(160deg,#1e5fa8,#123a6b)"></span> Blue</button>
+      <button class="bg-choice" data-bg="rustos"><span class="bg-swatch" style="background:linear-gradient(135deg,#020817,#006dff,#00d9ff)"></span> RustOS Electric</button>
+    </div>
+    <div class="start-section-title" style="margin-top:8px">System</div>
+    <div style="padding:6px 3px;color:#7fbfff;font-size:11px;line-height:1.8">RustOS Desktop<br>Static electric-blue theme</div>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -977,53 +990,44 @@ let zCounter = 10, maximizedState = {}, currentUser = null, canEdit = false;
 const backgroundMenu = document.getElementById('background-menu');
 const bgWatermark = document.getElementById('bg-watermark');
 function applyBackground(name) {
-  const bg = name === 'black' ? '#000' : 'linear-gradient(160deg, var(--desktop-blue-1) 0%, var(--desktop-blue-2) 100%)';
-  desktop.style.background = bg;
+  if (name === 'rustos') {
+    desktop.style.background = 'linear-gradient(rgba(0,8,24,.12),rgba(0,8,24,.12)), url("rustos-wallpaper.jpg") center center / cover no-repeat';
+  } else if (name === 'blue') {
+    desktop.style.background = 'linear-gradient(160deg, #063c85 0%, #020b24 100%)';
+  } else {
+    desktop.style.background = '#000';
+  }
   bgWatermark.classList.toggle('visible', name === 'black');
   localStorage.setItem('rustos_background', name);
 }
-applyBackground(localStorage.getItem('rustos_background') || 'black');
 const startButton = document.getElementById('start-btn');
 const startMenu = document.getElementById('start-menu');
 const backgroundButton = document.getElementById('background-btn');
 function closeStartMenu() {
-  startMenu.classList.remove('open');
-  startMenu.setAttribute('aria-hidden', 'true');
-  startButton.setAttribute('aria-expanded', 'false');
-  backgroundMenu.style.display = 'none';
-  backgroundButton.setAttribute('aria-expanded', 'false');
+  startMenu.classList.remove('open'); startMenu.setAttribute('aria-hidden','true');
+  backgroundMenu.classList.remove('open'); backgroundButton.setAttribute('aria-expanded','false');
 }
 function toggleStartMenu() {
-  const shouldOpen = !startMenu.classList.contains('open');
-  closeStartMenu();
-  if (shouldOpen) {
-    startMenu.classList.add('open');
-    startMenu.setAttribute('aria-hidden', 'false');
-    startButton.setAttribute('aria-expanded', 'true');
-  }
+  const willOpen = !startMenu.classList.contains('open'); closeStartMenu();
+  if (willOpen) { startMenu.classList.add('open'); startMenu.setAttribute('aria-hidden','false'); startButton.setAttribute('aria-expanded','true'); }
+  else startButton.setAttribute('aria-expanded','false');
 }
-startButton.setAttribute('role', 'button');
-startButton.setAttribute('tabindex', '0');
-startButton.setAttribute('aria-label', 'Open Start menu');
-startButton.setAttribute('aria-expanded', 'false');
 startButton.addEventListener('click', e => { e.stopPropagation(); toggleStartMenu(); });
-startButton.addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStartMenu(); }
-});
+startButton.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStartMenu(); } });
 startMenu.addEventListener('click', e => e.stopPropagation());
-backgroundButton.onclick = e => {
-  e.stopPropagation();
-  const show = backgroundMenu.style.display !== 'block';
-  backgroundMenu.style.display = show ? 'block' : 'none';
-  backgroundButton.setAttribute('aria-expanded', String(show));
-};
-document.querySelectorAll('.bg-choice').forEach(b => b.onclick = () => {
-  applyBackground(b.dataset.bg);
-  backgroundMenu.style.display = 'none';
-  backgroundButton.setAttribute('aria-expanded', 'false');
-});
+backgroundButton.onclick = e => { e.stopPropagation(); const show = !backgroundMenu.classList.contains('open'); backgroundMenu.classList.toggle('open',show); backgroundButton.setAttribute('aria-expanded',String(show)); };
+document.querySelectorAll('.bg-choice').forEach(b => b.onclick = () => { applyBackground(b.dataset.bg); backgroundMenu.classList.remove('open'); closeStartMenu(); });
 document.addEventListener('click', closeStartMenu);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStartMenu(); });
+applyBackground(localStorage.getItem('rustos_background') || 'rustos');
+['database','characters','artifacts','verses','transformations'].forEach(key => {
+  const btn = document.getElementById('start-' + key);
+  if (btn) btn.addEventListener('click', () => {
+    closeStartMenu();
+    if (key === 'database') { const icon = document.getElementById('icon-database'); if (icon) icon.click(); }
+    else { const db = document.getElementById('icon-database'); if (db) db.click(); setTimeout(() => { const target = [...document.querySelectorAll('.category-folder-item, .folder-item, button')].find(el => (el.textContent || '').trim().toLowerCase() === key); if (target) target.click(); }, 100); }
+  });
+});
 
 document.querySelectorAll('.account-option').forEach(b => b.onclick = () => {
   document.querySelectorAll('.account-option').forEach(x => x.classList.remove('selected'));
@@ -1408,8 +1412,8 @@ async function setUser() {
     currentUser = u.user; canEdit = u.role === 'editor';
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('account-name').textContent = `${u.user} (${u.role === 'editor' ? 'Editor' : 'Read only'})`;
-    const startMenuAccount = document.getElementById('start-menu-account');
-    if (startMenuAccount) startMenuAccount.textContent = `${u.user} (${u.role === 'editor' ? 'Editor' : 'Read only'})`;
+    document.getElementById('start-menu-account').textContent = u.user;
+    document.getElementById('start-menu-role').textContent = u.role === 'editor' ? 'Admin / Full Access' : 'Read-only Access';
     document.getElementById('upload-row').classList.toggle('visible', canEdit);
     ALL_ITEMS.map(i => i.key).forEach(k => {
       document.getElementById('textarea-' + k).readOnly = !canEdit;
