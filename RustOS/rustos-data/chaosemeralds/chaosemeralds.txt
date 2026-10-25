@@ -22,3 +22,6 @@ Red
 Yellow
 Green
 Purple
+Blue
+Cyan
+White
