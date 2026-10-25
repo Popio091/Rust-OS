@@ -7,3 +7,4 @@ they all are filled with an enrgy source called Chaos Energy, which provides a l
 - Stopping time
 - Explosion generation
 - Projectile-throwing
+
