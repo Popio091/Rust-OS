@@ -5,6 +5,6 @@ His forms include:
 - %Super Form%
 - %Hyper Form%
 - %Dark Form%
-- %Darkspine%
+- %Dark spine%
 - %Excalibur%
 - %Werehog%
