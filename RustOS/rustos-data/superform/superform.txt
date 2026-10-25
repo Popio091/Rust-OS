@@ -12,7 +12,4 @@ A state which had its origin first on the classic adventures starting in Emerald
 | %Tempest T. Hedgehog% | Yes |
 | %Knuckles% | Yes |
 | %Tails% | Yes |
-| Column 1 | Column 2 | Column 3 |
-| --- | --- | --- |
-| | | |
-| | | |
+
