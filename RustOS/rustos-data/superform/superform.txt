@@ -6,7 +6,7 @@ A state which had its origin first on the classic adventures starting in Emerald
 | %FG%
 | %Flow%
 | %Amy%
-%DB%
+| %DB%
 %Shadow T. Hedgehog%
 %Silver%
 %Tempest T. Hedgehog%
