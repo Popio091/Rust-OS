@@ -2,11 +2,11 @@ A state which had its origin first on the classic adventures starting in Emerald
 
 **Characters known to have used this form:**
 | %Sonic T. Hedgehog% |
-| %Crimson T. Hedgehog%
-| %FG%
-| %Flow%
-| %Amy%
-| %DB%
+| %Crimson T. Hedgehog% |
+| %FG% |
+| %Flow% |
+| %Amy% |
+| %DB% |
 | %Shadow T. Hedgehog%
 | %Silver%
 | %Tempest T. Hedgehog%
