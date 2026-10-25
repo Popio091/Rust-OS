@@ -18,10 +18,10 @@ They also can be supercharged in the Hidden Palace by the power of the %Master E
 
 They come in different colors; each emerald has its own one, wich include:
 
-Red
-Yellow
-Green
-Purple
-Blue
-Cyan
-White
+- Red
+- Yellow
+- Green
+- Purple
+- Blue
+- Cyan
+- White
