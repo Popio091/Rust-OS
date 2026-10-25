@@ -9,6 +9,6 @@ A state which had its origin first on the classic adventures starting in Emerald
 | %DB% | Yes |
 | %Shadow T. Hedgehog% | Yes |
 | %Silver% | Yes |
-| %Tempest T. Hedgehog% |
-| %Knuckles% |
-| %Tails% |
+| %Tempest T. Hedgehog% | Yes |
+| %Knuckles% | Yes |
+| %Tails% | Yes |
