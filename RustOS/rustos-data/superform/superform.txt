@@ -4,7 +4,7 @@ A state which had its origin first on the classic adventures starting in Emerald
 
 
 | Column 1 | Column 2
-| --- | --- | --- |
+| --- | --- 
 | %Sonic T. Hedgehog% | Yes |
 | %Crimson T. Hedgehog% | Yes |
 | %FG% | Yes |
