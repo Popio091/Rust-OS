@@ -6,7 +6,7 @@ A state which had its origin first on the classic adventures starting in Emerald
 | Character | Has the tegular form |
 | --- | --- |
 | %Sonic T. Hedgehog% | Yes |
-| %Crimson T. Hedgehog% | Yes |
+| %Crimson T. Hedgehog% | No |
 | %FG% | Yes |
 | %Flow% | Yes |
 | %Amy% | Yes |
